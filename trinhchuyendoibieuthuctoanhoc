@@ -1,3 +1,25 @@
+// =====================================================================
+// ĐỀ TÀI: TRÌNH ĐÁNH GIÁ & CHUYỂN ĐỔI BIỂU THỨC TOÁN HỌC
+// Chức năng: Infix -> Postfix (Shunting-yard), Infix -> Prefix, LaTeX,
+//            Tính giá trị (có biến, hàm), vẽ cây biểu thức, lưu lịch sử.
+// Cấu trúc dữ liệu: Stack (tự cài bằng danh sách liên kết), Cây nhị phân.
+// =====================================================================
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <cctype>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <iomanip>
+using namespace std;
+
+const double PI_V = 3.14159265358979323846;
+const double E_V  = 2.71828182845904523536;
+
 // ---------------------------------------------------------------------
 // 1. NGĂN XẾP (STACK) TỰ CÀI ĐẶT BẰNG DANH SÁCH LIÊN KẾT ĐƠN
 // ---------------------------------------------------------------------
