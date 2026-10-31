@@ -159,9 +159,7 @@ vector<Token> toPostfix(const vector<Token>& tk) {
     }
     return 0;
 }
-// ---------------------------------------------------------------------
 // 4. TÍNH GIÁ TRỊ BIỂU THỨC HẬU TỐ (CÓ IN TỪNG BƯỚC)
-// ---------------------------------------------------------------------
 double applyBinary(const string& op, double a, double b) {
     if (op == "+") return a + b;
     if (op == "-") return a - b;
