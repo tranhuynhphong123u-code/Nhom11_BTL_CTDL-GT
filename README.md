@@ -1,1 +1,121 @@
-# Nhom11_BTL_CTDL-GT
+// =====================================================================
+// ĐỀ TÀI: TRÌNH ĐÁNH GIÁ & CHUYỂN ĐỔI BIỂU THỨC TOÁN HỌC
+// Chức năng: Infix -> Postfix (Shunting-yard), Infix -> Prefix, LaTeX,
+//            Tính giá trị (có biến, hàm), vẽ cây biểu thức, lưu lịch sử.
+// Cấu trúc dữ liệu: Stack (tự cài bằng danh sách liên kết), Cây nhị phân.
+// =====================================================================
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <cctype>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <iomanip>
+using namespace std;
+
+const double PI_V = 3.14159265358979323846;
+const double E_V  = 2.71828182845904523536;
+
+// ---------------------------------------------------------------------
+// 1. NGĂN XẾP (STACK) TỰ CÀI ĐẶT BẰNG DANH SÁCH LIÊN KẾT ĐƠN
+// ---------------------------------------------------------------------
+template <typename T>
+class Stack {
+    struct Node { T data; Node* next; };
+    Node* topPtr = nullptr;
+    size_t n = 0;
+public:
+    Stack() = default;
+    Stack(const Stack&) = delete;
+    Stack& operator=(const Stack&) = delete;
+    ~Stack() { while (!empty()) pop(); }
+
+    void push(const T& v) { topPtr = new Node{v, topPtr}; ++n; }
+    void pop() {
+        if (empty()) throw runtime_error("Stack rong");
+        Node* t = topPtr; topPtr = topPtr->next; delete t; --n;
+    }
+    T& top() {
+        if (empty()) throw runtime_error("Stack rong");
+        return topPtr->data;
+    }
+    bool empty() const { return topPtr == nullptr; }
+    size_t size() const { return n; }
+
+    // In nội dung ngăn xếp (đáy -> đỉnh) phục vụ minh họa từng bước
+    string toString() const {
+        vector<T> v;
+        for (Node* p = topPtr; p; p = p->next) v.push_back(p->data);
+        ostringstream os; os << setprecision(10) << "[";
+        for (size_t i = v.size(); i-- > 0;) { os << v[i]; if (i) os << ", "; }
+        os << "]";
+        return os.str();
+    }
+};
+
+// ---------------------------------------------------------------------
+// 2. TOKEN & BỘ TÁCH TOKEN (LEXER)
+// ---------------------------------------------------------------------
+enum class TokType { NUM, VAR, OP, FUNC, LP, RP };
+struct Token {
+    TokType type;
+    string text;
+    double value = 0;
+};
+
+string fmt(double v) { ostringstream os; os << setprecision(10) << v; return os.str(); }
+string showName(const Token& t) { return t.text == "~" ? "neg" : t.text; }
+
+bool isFunction(const string& s) {
+    static const char* fn[] = {"sin","cos","tan","sqrt","log","ln","abs","exp"};
+    for (auto f : fn) if (s == f) return true;
+    return false;
+}
+int  prec(const string& op) {
+    if (op == "+" || op == "-") return 1;
+    if (op == "*" || op == "/" || op == "%") return 2;
+    if (op == "~") return 3;           // âm một ngôi
+    if (op == "^") return 4;
+    return 0;
+}
+bool rightAssoc(const string& op) { return op == "^" || op == "~"; }
+
+vector<Token> tokenize(const string& s) {
+    vector<Token> out;
+    size_t i = 0;
+    while (i < s.size()) {
+        char c = s[i];
+        if (isspace((unsigned char)c)) { i++; continue; }
+        if (isdigit((unsigned char)c) || c == '.') {
+            size_t j = i; int dots = 0;
+            while (j < s.size() && (isdigit((unsigned char)s[j]) || s[j] == '.')) {
+                if (s[j] == '.') dots++;
+                j++;
+            }
+            string num = s.substr(i, j - i);
+            if (dots > 1 || num == ".") throw runtime_error("So khong hop le: " + num);
+            out.push_back({TokType::NUM, num, stod(num)});
+            i = j;
+        } else if (isalpha((unsigned char)c)) {
+            size_t j = i;
+            while (j < s.size() && (isalnum((unsigned char)s[j]) || s[j] == '_')) j++;
+            string name = s.substr(i, j - i);
+            out.push_back({isFunction(name) ? TokType::FUNC : TokType::VAR, name, 0});
+            i = j;
+        } else if (c == '(') { out.push_back({TokType::LP, "(", 0}); i++; }
+        else if (c == ')')   { out.push_back({TokType::RP, ")", 0}); i++; }
+        else if (strchr("+-*/%^", c)) {
+            // Dấu +/- đứng đầu, sau toán tử hoặc sau '(' là toán tử MỘT NGÔI
+            bool unary = out.empty() || out.back().type == TokType::OP ||
+                         out.back().type == TokType::LP;
+            if (unary && c == '+') { i++; continue; }          // +x == x
+            out.push_back({TokType::OP, (unary && c == '-') ? string("~") : string(1, c), 0});
+            i++;
+        } else throw runtime_error(string("Ky tu khong hop le: ") + c);
+    }
+    return out;
+}
