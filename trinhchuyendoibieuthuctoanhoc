@@ -294,3 +294,86 @@ void printTree(const TNode* n, int depth = 0) {
     printTree(n->l, depth + 1);
 }
 int treeHeight(const TNode* n) { return n ? 1 + max(treeHeight(n->l), treeHeight(n->r)) : 0; }
+// ---------------------------------------------------------------------
+// 6. CÁC HÀM TIỆN ÍCH CẤP CAO, LỊCH SỬ, TỰ KIỂM THỬ
+// ---------------------------------------------------------------------
+map<string,double> vars = {{"pi", PI_V}, {"e", E_V}};
+vector<string> history;
+
+void cmdEvaluate(const string& expr, bool trace) {
+    auto tk = tokenize(expr);
+    auto pf = toPostfix(tk);
+    cout << "Hau to: "; for (auto& t : pf) cout << showName(t) << " "; cout << "\n\n";
+    double r = evalPostfix(pf, vars, trace);
+    cout << "\n=> Ket qua = " << fmt(r) << "\n";
+    history.push_back(expr + " = " + fmt(r));
+}
+void cmdConvert(const string& expr) {
+    auto pf = toPostfix(tokenize(expr));
+    TNode* root = buildTree(pf);
+    vector<string> pre; toPrefix(root, pre);
+    cout << "Trung to (chuan hoa): " << toInfix(root) << "\n";
+    cout << "Tien to             : "; for (auto& s : pre) cout << s << " "; cout << "\n";
+    cout << "Hau to              : "; for (auto& t : pf) cout << showName(t) << " "; cout << "\n";
+    cout << "LaTeX               : $" << toLatex(root) << "$\n";
+    cout << "Chieu cao cay       : " << treeHeight(root) << "\n\nCay bieu thuc (xoay ngang):\n";
+    printTree(root);
+    freeTree(root);
+}
+void saveHistory(const string& file) {
+    ofstream f(file);
+    for (auto& h : history) f << h << "\n";
+    cout << "Da luu " << history.size() << " dong vao " << file << "\n";
+}
+void loadHistory(const string& file) {
+    ifstream f(file); string line;
+    while (getline(f, line)) if (!line.empty()) history.push_back(line);
+}
+void runTests() {
+    struct Case { string e; double expect; bool err; };
+    vector<Case> cs = {
+        {"2+3*4", 14, false}, {"(2+3)*4", 20, false}, {"-2^2", -4, false},
+        {"2^3^2", 512, false}, {"2^-1", 0.5, false}, {"10-4-3", 3, false},
+        {"3+4*2/(1-5)^2^3", 3.0001220703125, false}, {"sqrt(16)+abs(-3)", 7, false},
+        {"10%3", 1, false}, {"sin(0)+cos(0)", 1, false}, {"2*pi", 2 * PI_V, false},
+        {"1/0", 0, true}, {"(2+3", 0, true}, {"2+*3", 0, true}, {"sqrt(-4)", 0, true}, {"x+1", 0, true}};
+    int pass = 0;
+    for (auto& c : cs) {
+        bool ok; string got;
+        try {
+            double r = evalPostfix(toPostfix(tokenize(c.e)), vars, false);
+            ok = !c.err && fabs(r - c.expect) < 1e-9; got = fmt(r);
+        } catch (exception& ex) { ok = c.err; got = string("LOI: ") + ex.what(); }
+        pass += ok;
+        cout << (ok ? "[PASS] " : "[FAIL] ") << left << setw(22) << c.e << " -> " << got << "\n";
+    }
+    cout << "Tong ket: " << pass << "/" << cs.size() << " test dung\n";
+}
+
+int main() {
+    loadHistory("history.txt");
+    string line;
+    while (true) {
+        cout << "\n===== TRINH DANH GIA & CHUYEN DOI BIEU THUC =====\n"
+             << "1. Tinh gia tri (hien thi tung buoc)\n2. Chuyen doi (tien to/hau to/LaTeX/cay)\n"
+             << "3. Gan bien\n4. Xem bien\n5. Xem lich su\n6. Luu lich su\n7. Chay bo test\n0. Thoat\nChon: ";
+        if (!getline(cin, line)) break;
+        try {
+            if (line == "0") break;
+            else if (line == "1") { cout << "Nhap bieu thuc: "; getline(cin, line); cmdEvaluate(line, true); }
+            else if (line == "2") { cout << "Nhap bieu thuc: "; getline(cin, line); cmdConvert(line); }
+            else if (line == "3") {
+                string name, val; cout << "Ten bien: "; getline(cin, name); cout << "Gia tri (co the la bieu thuc): "; getline(cin, val);
+                if (name.empty() || !isalpha((unsigned char)name[0])) throw runtime_error("Ten bien khong hop le");
+                vars[name] = evalPostfix(toPostfix(tokenize(val)), vars, false);
+                cout << name << " = " << fmt(vars[name]) << "\n";
+            }
+            else if (line == "4") for (auto& kv : vars) cout << kv.first << " = " << fmt(kv.second) << "\n";
+            else if (line == "5") { for (size_t i = 0; i < history.size(); i++) cout << i + 1 << ". " << history[i] << "\n"; }
+            else if (line == "6") saveHistory("history.txt");
+            else if (line == "7") runTests();
+            else cout << "Lua chon khong hop le\n";
+        } catch (exception& ex) { cout << "[LOI] " << ex.what() << "\n"; }
+    }
+    return 0;
+}
