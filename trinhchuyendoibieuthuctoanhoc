@@ -159,3 +159,56 @@ vector<Token> toPostfix(const vector<Token>& tk) {
     }
     return 0;
 }
+// ---------------------------------------------------------------------
+// 4. TÍNH GIÁ TRỊ BIỂU THỨC HẬU TỐ (CÓ IN TỪNG BƯỚC)
+// ---------------------------------------------------------------------
+double applyBinary(const string& op, double a, double b) {
+    if (op == "+") return a + b;
+    if (op == "-") return a - b;
+    if (op == "*") return a * b;
+    if (op == "/") { if (fabs(b) < 1e-12) throw runtime_error("Chia cho 0"); return a / b; }
+    if (op == "%") { if (fabs(b) < 1e-12) throw runtime_error("Chia lay du cho 0"); return fmod(a, b); }
+    if (op == "^") return pow(a, b);
+    throw runtime_error("Toan tu la: " + op);
+}
+double applyFunc(const string& f, double x) {
+    if (f == "sin") return sin(x);
+    if (f == "cos") return cos(x);
+    if (f == "tan") return tan(x);
+    if (f == "abs") return fabs(x);
+    if (f == "exp") return exp(x);
+    if (f == "sqrt") { if (x < 0) throw runtime_error("sqrt cua so am"); return sqrt(x); }
+    if (f == "ln" || f == "log") { if (x <= 0) throw runtime_error("log cua so <= 0"); return f == "ln" ? log(x) : log10(x); }
+    throw runtime_error("Ham la: " + f);
+}
+
+double evalPostfix(const vector<Token>& pf, const map<string,double>& vars, bool trace) {
+    Stack<double> st;
+    if (trace) cout << left << setw(8) << "Token" << setw(34) << "Hanh dong" << "Ngan xep\n"
+                    << string(70, '-') << "\n";
+    for (const Token& t : pf) {
+        string act;
+        if (t.type == TokType::NUM) { st.push(t.value); act = "Day so " + t.text; }
+        else if (t.type == TokType::VAR) {
+            auto it = vars.find(t.text);
+            if (it == vars.end()) throw runtime_error("Bien chua gan gia tri: " + t.text);
+            st.push(it->second); act = "Thay " + t.text + " = " + fmt(it->second);
+        } else {
+            bool unary = (t.text == "~") || t.type == TokType::FUNC;
+            if (st.size() < (unary ? 1u : 2u)) throw runtime_error("Thieu toan hang");
+            double b = st.top(); st.pop(); double r;
+            if (unary) {
+                r = (t.text == "~") ? -b : applyFunc(t.text, b);
+                act = showName(t) + "(" + fmt(b) + ") = " + fmt(r);
+            } else {
+                double a = st.top(); st.pop();
+                r = applyBinary(t.text, a, b);
+                act = fmt(a) + " " + t.text + " " + fmt(b) + " = " + fmt(r);
+            }
+            st.push(r);
+        }
+        if (trace) cout << left << setw(8) << showName(t) << setw(34) << act << st.toString() << "\n";
+    }
+    if (st.size() != 1) throw runtime_error("Bieu thuc khong hop le (thua toan hang)");
+    return st.top();
+}
