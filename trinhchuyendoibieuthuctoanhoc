@@ -119,3 +119,50 @@ while (j < s.size() && (isalnum((unsigned char)s[j]) || s[j] == '_')) j++;
     }
     return out;
 }
+vector<Token> toPostfix(const vector<Token>& tk) {
+    vector<Token> out;
+    Stack<Token> st;
+    for (const Token& t : tk) {
+        switch (t.type) {
+        case TokType::NUM: case TokType::VAR: out.push_back(t); break;
+        case TokType::FUNC: st.push(t); break;
+        case TokType::OP:
+            if (t.text != "~") {   // toán tử một ngôi tiền tố chỉ push, không pop
+                while (!st.empty() &&
+                       (st.top().type == TokType::FUNC ||
+                        (st.top().type == TokType::OP &&
+                         (prec(st.top().text) > prec(t.text) ||
+                          (prec(st.top().text) == prec(t.text) && !rightAssoc(t.text)))))) {
+                    out.push_back(st.top()); st.pop();
+                }
+            }
+            st.push(t); break;
+        case TokType::LP: st.push(t); break;
+        case TokType::RP:
+            while (!st.empty() && st.top().type != TokType::LP) { out.push_back(st.top()); st.pop(); }
+            if (st.empty()) throw runtime_error("Thieu dau '(' tuong ung");
+            st.pop();                                   // bỏ '('
+            if (!st.empty() && st.top().type == TokType::FUNC) { out.push_back(st.top()); st.pop(); }
+            break;
+        }
+    }
+    while (!st.empty()) {
+        if (st.top().type == TokType::LP) throw runtime_error("Thieu dau ')' tuong ung");
+        out.push_back(st.top()); st.pop();
+    }
+    return out;
+}
+
+int main() {
+    const char* tests[] = {"3 + 4 * 2 / (1 - 5) ^ 2 ^ 3", "-2^2", "sin(x) + 2 * (3 - 1)", "10 - 4 - 3", "(2+3", "2+3)"};
+    for (const char* e : tests) {
+        cout << "Trung to: " << e << "\n";
+        try {
+            vector<Token> pf = toPostfix(tokenize(e));
+            cout << "Hau to  : ";
+            for (const Token& t : pf) cout << showName(t) << " ";
+            cout << "\n\n";
+        } catch (exception& ex) { cout << "[LOI] " << ex.what() << "\n\n"; }
+    }
+    return 0;
+}
