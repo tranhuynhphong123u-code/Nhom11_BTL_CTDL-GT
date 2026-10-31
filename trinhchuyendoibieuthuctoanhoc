@@ -119,6 +119,9 @@ while (j < s.size() && (isalnum((unsigned char)s[j]) || s[j] == '_')) j++;
     }
     return out;
 }
+// ---------------------------------------------------------------------
+// 3. THUẬT TOÁN SHUNTING-YARD: INFIX -> POSTFIX
+// ---------------------------------------------------------------------
 vector<Token> toPostfix(const vector<Token>& tk) {
     vector<Token> out;
     Stack<Token> st;
@@ -153,16 +156,6 @@ vector<Token> toPostfix(const vector<Token>& tk) {
     return out;
 }
 
-int main() {
-    const char* tests[] = {"3 + 4 * 2 / (1 - 5) ^ 2 ^ 3", "-2^2", "sin(x) + 2 * (3 - 1)", "10 - 4 - 3", "(2+3", "2+3)"};
-    for (const char* e : tests) {
-        cout << "Trung to: " << e << "\n";
-        try {
-            vector<Token> pf = toPostfix(tokenize(e));
-            cout << "Hau to  : ";
-            for (const Token& t : pf) cout << showName(t) << " ";
-            cout << "\n\n";
-        } catch (exception& ex) { cout << "[LOI] " << ex.what() << "\n\n"; }
     }
     return 0;
 }
